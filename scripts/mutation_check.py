@@ -6,6 +6,21 @@ in 25 targeted ways and demands that `scripts/qa_gate.py` turns red for each
 one. A mutation the gate fails to catch is reported as BROKEN and fails CI.
 
 It also runs an unmutated control: the gate must be green on the real files.
+
+Baseline comparison
+-------------------
+`--baseline` points at the historical inline gate lifted out of git history by
+`scripts/extract_baseline_gate.py`. Every mutation the old gate caught must also
+be caught by the new one, otherwise the run fails with
+`Regression against baseline gate`.
+
+That comparison is scoped to the mutations that target `index.html`. The
+historical gate asserted Turkish README phrases; the README is English now, so
+the old gate can no longer speak about it and the five README mutations are
+reported as `baseline: n/a`. To keep the scene comparison meaningful the
+baseline gate is handed the README from its own commit via `--baseline-readme`,
+so it is judged on the contract it was written for instead of on a document that
+postdates it.
 """
 
 import pathlib
@@ -64,14 +79,18 @@ MUTATIONS = [
     ("privacy-localstorage-injected", "index.html", inject("<script>localStorage.setItem('a','b');</script>")),
     ("privacy-sessionstorage-injected", "index.html", inject("<script>sessionStorage.setItem('a','b');</script>")),
     ("privacy-beacon-injected", "index.html", inject("<script>navigator.sendBeacon('/x');</script>")),
-    ("readme-limits-section-removed", "README.md", swap("## Sınırlar", "## Notlar")),
-    ("readme-orbitcontrols-claim-removed", "README.md", lambda t: t.replace("OrbitControls", "kamera")),
-    ("readme-version-claim-removed", "README.md", lambda t: t.replace("0.128.0", "en yeni")),
-    ("readme-licence-pointer-removed", "README.md", lambda t: t.replace("LICENSE", "lisans")),
-    ("readme-mode-name-removed", "README.md", lambda t: t.replace("Normal Gece", "Gece")),
+    ("readme-limits-section-removed", "README.md", swap("## Limits", "## Notes")),
+    ("readme-orbitcontrols-claim-removed", "README.md", lambda t: t.replace("OrbitControls", "camera")),
+    ("readme-version-claim-removed", "README.md", lambda t: t.replace("0.128.0", "latest")),
+    ("readme-licence-pointer-removed", "README.md", lambda t: t.replace("LICENSE", "licence")),
+    ("readme-mode-name-removed", "README.md", lambda t: t.replace("**Night**", "**Evening**")),
 ]
 
 FILES = ("index.html", "README.md", "LICENSE", ".nojekyll")
+
+# The historical gate predates the English README, so it is only asked about
+# mutations of the file it can still judge.
+BASELINE_TARGETS = {"index.html"}
 
 
 def run_gate(workdir, gate=None):
@@ -84,20 +103,32 @@ def run_gate(workdir, gate=None):
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
 
-def stage(tmp):
+def stage(tmp, baseline_readme=None):
     for name in FILES:
         src = ROOT / name
         if src.exists():
             shutil.copy2(src, tmp / name)
+    if baseline_readme is not None:
+        shutil.copy2(baseline_readme, tmp / "README.md")
 
 
 def main(argv):
     baseline = None
+    baseline_readme = None
     if "--baseline" in argv:
         baseline = pathlib.Path(argv[argv.index("--baseline") + 1]).resolve()
         if not baseline.exists():
             print(f"::error title=Baseline gate missing::{baseline}")
             return 1
+    if "--baseline-readme" in argv:
+        baseline_readme = pathlib.Path(argv[argv.index("--baseline-readme") + 1]).resolve()
+        if not baseline_readme.exists():
+            print(f"::error title=Baseline README missing::{baseline_readme}")
+            return 1
+    if baseline is not None and baseline_readme is None:
+        print("::error title=Baseline README required::--baseline needs --baseline-readme; "
+              "the historical gate asserts the README of its own commit.")
+        return 1
 
     broken = []
     errors = []
@@ -112,10 +143,15 @@ def main(argv):
             print(out)
             return 1
         print("control            : gate green on the real files (exit 0)")
-        if baseline is not None:
+
+    if baseline is not None:
+        with tempfile.TemporaryDirectory() as raw:
+            control = pathlib.Path(raw)
+            stage(control, baseline_readme)
             bcode, bout = run_gate(control, baseline)
             if bcode != 0:
-                print("CONTROL FAILED: the baseline gate is red on the unmutated tree.")
+                print("CONTROL FAILED: the baseline gate is red on the unmutated tree "
+                      "(index.html from HEAD, README.md from the baseline commit).")
                 print(bout)
                 return 1
             print("control (baseline) : baseline gate green on the real files (exit 0)")
@@ -132,24 +168,36 @@ def main(argv):
                 print(f"{name:35s}: ANCHOR MISSING ({exc})")
                 continue
             code, _ = run_gate(tmp)
-            suffix = ""
-            if baseline is not None:
-                bcode, _ = run_gate(tmp, baseline)
+
+        suffix = ""
+        if baseline is not None:
+            if target not in BASELINE_TARGETS:
+                suffix = "   [baseline: n/a (README language changed)]"
+            else:
+                with tempfile.TemporaryDirectory() as raw:
+                    btmp = pathlib.Path(raw)
+                    stage(btmp, baseline_readme)
+                    bpath = btmp / target
+                    bpath.write_text(transform(bpath.read_text(encoding="utf-8")), encoding="utf-8")
+                    bcode, _ = run_gate(btmp, baseline)
                 suffix = "   [baseline: caught]" if bcode != 0 else "   [baseline: missed]"
                 if bcode != 0 and code == 0:
                     regressions.append(name)
-            if code == 0:
-                broken.append(name)
-                print(f"{name:35s}: BROKEN (gate stayed green){suffix}")
-            else:
-                print(f"{name:35s}: caught (exit {code}){suffix}")
+
+        if code == 0:
+            broken.append(name)
+            print(f"{name:35s}: BROKEN (gate stayed green){suffix}")
+        else:
+            print(f"{name:35s}: caught (exit {code}){suffix}")
 
     total = len(MUTATIONS)
     caught = total - len(broken) - len(errors)
     print(f"\n{caught}/{total} mutations caught by scripts/qa_gate.py")
     if baseline is not None:
         print(f"baseline gate compared: {baseline}")
-        print("superset claim: every mutation the baseline caught must also be caught here.")
+        print(f"baseline README used  : {baseline_readme}")
+        print("superset claim: every index.html mutation the baseline caught must also be caught here.")
+        print("scope: the 5 README mutations are not compared, the historical gate asserts Turkish phrases.")
 
     if errors:
         for name, msg in errors:

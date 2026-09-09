@@ -1,111 +1,122 @@
 <h1 align="center">Luna No. 7</h1>
 
 <p align="center">
-  Gece vardiyasındaki minyatür bir lunapark. Tek dosya, tek sahne,<br>
-  üç atmosfer modu. Açtığınız anda dönmeye başlar.
+  A miniature amusement park on the night shift. One file, one scene,<br>
+  three atmosphere modes. It starts turning the moment you open it.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/dosya-1-FF4D4F?style=flat-square" alt="1 dosya">
-  <img src="https://img.shields.io/badge/atmosfer%20modu-3-FF4D4F?style=flat-square" alt="3 mod">
+  <img src="https://img.shields.io/badge/files-1-FF4D4F?style=flat-square" alt="1 file">
+  <img src="https://img.shields.io/badge/atmosphere%20modes-3-FF4D4F?style=flat-square" alt="3 modes">
   <img src="https://img.shields.io/badge/three.js-0.128.0-FF4D4F?style=flat-square" alt="three 0.128.0">
-  <img src="https://img.shields.io/badge/mutasyon%20testi-25%2F25-FF4D4F?style=flat-square" alt="25/25 mutasyon yakalandı">
+  <img src="https://img.shields.io/badge/mutation%20test-25%2F25-FF4D4F?style=flat-square" alt="25/25 mutations caught">
 </p>
 
 ---
 
-## Ne yapıyor
+## What it does
 
-`index.html` tarayıcıda çalışan bir WebGL sahnesi açar: dönme dolap, kapalı
-devre bir hız treni, atlıkarınca ve üç satış standı. Kamera OrbitControls ile
-sürüklenip yakınlaştırılır; kullanıcı üç saniye dokunmazsa kendi kendine tur
-atmaya döner.
+`index.html` opens a WebGL scene that runs in the browser: a Ferris wheel, a
+closed-circuit roller coaster, a carousel and three vendor stalls. The camera is
+dragged and zoomed with OrbitControls; if nobody touches it for three seconds it
+goes back to orbiting on its own.
 
-| Etkileşim | Sonuç |
+| Interaction | Result |
 |---|---|
-| Sürükle | Sahneyi yatay/dikey döndürür (`maxPolarAngle` ile ufkun altına inilemez) |
-| Tekerlek / iki parmak | 14-34 birim arasında yakınlaşma |
-| **Gündüz** | Mavi gökyüzü, yıldızlar kapanır, neon yayımı %7'ye düşer |
-| **Normal Gece** | Varsayılan mod: lacivert gökyüzü, tam neon, 450 yıldız |
-| **Festival** | Mor gökyüzü, %175 neon, nokta ışıkları renk döngüsüne girer |
+| Drag | Rotates the scene horizontally and vertically (`maxPolarAngle` keeps you above the horizon) |
+| Wheel / two fingers | Zoom between 14 and 34 units |
+| **Day** | Blue sky, stars switched off, neon emission drops to 7% |
+| **Night** | Default mode: deep blue sky, full neon, 450 stars |
+| **Festival** | Purple sky, 175% neon, point lights enter a colour cycle |
 
-Mod geçişleri anlık değil: arka plan, sis, ışık şiddetleri ve tone-mapping
-pozlaması her karede hedefe doğru yumuşatılır.
+Mode changes are not instant: background, fog, light intensities and tone
+mapping exposure are eased toward their targets on every frame.
 
-## Nasıl çalıştırılır
+## How to run it
 
 ```bash
 git clone https://github.com/umutseve4/luna-no-7.git
 cd luna-no-7
-python3 -m http.server 8000   # ya da dosyayı doğrudan tarayıcıya sürükleyin
+python3 -m http.server 8000   # or just drag the file into a browser
 ```
 
-Derleme adımı, paket yöneticisi ve yapılandırma dosyası yoktur.
+There is no build step, no package manager and no configuration file.
 
-## Nasıl doğrulanıyor
+## How it is verified
 
-### 1. Kapı: sahnenin değişmezleri
+### 1. The gate: the invariants of the scene
 
-`scripts/qa_gate.py` her push ve her PR'da çalışır ve sahnenin bağlı olduğu
-sözleşmeyi denetler: tam olarak iki dış betik ve ikisi de `https`, tek ve
-sabitlenmiş `three` sürümü, `data-m` düğmelerinin day/night/festival üçlüsü ile
-`T` palet tablosundaki karşılıkları, CSS'teki `prefers-reduced-motion` bloğu ve
-betikteki `matchMedia` sorgusu ayrı ayrı, görünür klavye odak halkası,
-`aria-label` ve sayfanın çevrimdışı kalması için hiçbir `fetch(`,
-`XMLHttpRequest`, `localStorage`, `sessionStorage` ya da `sendBeacon` kullanımı
-bulunmaması. Bu README'nin yukarıdaki sözleşmeyi anlatmayı sürdürdüğü de aynı
-adımda doğrulanır.
+`scripts/qa_gate.py` runs on every push and every PR and checks the contract the
+scene depends on: exactly two external scripts and both over `https`, a single
+pinned `three` version, `data-m` buttons covering the day/night/festival triple
+together with their entries in the `T` palette table, the
+`prefers-reduced-motion` block in the CSS and the `matchMedia` query in the
+script checked separately, a visible keyboard focus ring, an `aria-label`, and
+no use of `fetch(`, `XMLHttpRequest`, `localStorage`, `sessionStorage` or
+`sendBeacon` so the page stays offline. The same step also verifies that this
+README still documents the contract above.
 
-### 2. Kapının bir şey ölçtüğünün kanıtı
+### 2. Proof that the gate measures something
 
-Yeşil bir kontrol, kapının bir şeye baktığını göstermez. `scripts/mutation_check.py`
-sahneyi kasten **25 farklı biçimde bozar** ve her birinde kapının kırmızıya
-dönmesini şart koşar. Yeşil kalan tek bir mutasyon bile `BROKEN` olarak
-raporlanır ve CI düşer. Bozulmamış ağaçta kapının yeşil olduğunu doğrulayan bir
-kontrol koşusu da vardır.
+A green check does not show that the gate is looking at anything.
+`scripts/mutation_check.py` deliberately breaks the scene in **25 different
+ways** and requires the gate to turn red for each one. A single mutation that
+stays green is reported as `BROKEN` and fails CI. There is also a control run
+that verifies the gate is green on the untouched tree.
 
-Bu test iki gerçek boşluk buldu. CSS'teki azaltılmış hareket bloğu tümüyle
-silindiğinde kapı yeşil kalıyordu, çünkü aynı metin betikteki `matchMedia`
-çağrısında da geçiyordu; artık iki kural ayrı ayrı aranıyor. Kapı dosyaya
-taşınırken bir şey kaybedilmediği iddia edilmiyor, ölçülüyor:
-`scripts/extract_baseline_gate.py` eski satır içi kapıyı geçmiş commit'ten
-çıkarır, mutasyon koşusu ikisini yan yana çalıştırır ve eskisinin yakaladığı bir
-mutasyonu yenisi kaçırırsa iş akışı `Regression against baseline gate` hatasıyla
-düşer.
+That test found two real gaps. When the reduced-motion block in the CSS was
+deleted entirely, the gate stayed green because the same text also occurred in
+the `matchMedia` call in the script; the two rules are now looked for
+separately. Nothing is claimed about the move of the gate into a file, it is
+measured: `scripts/extract_baseline_gate.py` lifts the old inline gate out of a
+historical commit, the mutation run executes both side by side, and if the new
+gate misses a mutation the old one caught, the workflow fails with
+`Regression against baseline gate`.
 
-### 3. Yayın: sayfanın gerçekten bu baytları servis ettiği
+The baseline comparison covers the 20 mutations that target `index.html`. The
+five README mutations are compared against the current gate only, and are marked
+`baseline: n/a` in the log. The reason is stated rather than hidden: the
+historical gate asserted Turkish README phrases, this README is English, so the
+old gate can no longer speak about it. To keep the scene comparison honest the
+baseline gate is handed the README from its own commit, so it is judged on the
+contract it was written for.
 
-`pages` iş akışı yayınlar, sonra `scripts/live_bytes_proof.py` yayınlanan adresi
-çeker, HTTP 200 ister, gövdenin SHA-256'sını hesaplar ve commit'lenmiş
-`index.html`'in SHA-256'sıyla karşılaştırır. Eşleşmezse iş akışı kırmızıya döner.
-"Dağıtım başarılı" cümlesi böylece "o adres bu commit'in baytlarını servis
-ediyor" anlamına gelir.
+### 3. Publication: proof that the page really serves these bytes
 
-Pages ayarı kapalıyken iş akışı yayın adımlarını atlar ve bunu bir uyarı olarak
-basar. Yeşil bir koşu, sitenin yayında olduğu anlamına gelmez; yayın durumu
-deponun Environments bölümünden görülür.
+The `pages` workflow publishes, then `scripts/live_bytes_proof.py` fetches the
+published address, requires HTTP 200, computes the SHA-256 of the body and
+compares it with the SHA-256 of the committed `index.html`. If they differ the
+workflow turns red. That is what makes the sentence "deployment succeeded" mean
+"that address is serving the bytes of this commit".
 
-## Sınırlar
+When the Pages setting is off, the workflow skips the publishing steps and
+prints it as a warning. A green run does not mean the site is live; the
+publication state is visible in the repository's Environments section.
 
-- **Bağımlılık CDN'den geliyor.** `three` 0.128.0 ve `OrbitControls` jsDelivr
-  üzerinden yükleniyor; ağ yoksa sayfa siyah kalır. Sürüm sabit, ama dosyalar
-  bu depoda değil.
-- **Ölçülmüş bir kare hızı iddiası yok.** Piksel oranı 1.6 ile sınırlandı ve
-  gölge haritası 1024x1024'te tutuldu; bunlar makul varsayılanlar, ölçüm değil.
-  Depoda benchmark yok.
-- **`prefers-reduced-motion` hareketi yavaşlatır, kaldırmaz.** Dönme dolap,
-  tren ve atlıkarınca %18 hızla dönmeye devam eder; otomatik kamera turu ise
-  tamamen kapanır.
-- **Festival modundaki renk döngüsü, azaltılmış hareket tercihinde durur,**
-  ancak yüksek neon parlaklığı yerinde kalır.
-- **Mutasyon testi kapıyı ölçer, sahneyi değil.** 25/25 sonucu, listelenen
-  bozulmaların yakalandığını söyler; test edilmemiş bir bozulma biçimi her zaman
-  mümkündür. Görsel doğruluk ve kare hızı hâlâ elle bakmayı gerektirir.
-- **Sahne tamamen elle modellenmiştir; gerçek bir lunaparkı temsil etmez.**
-  Ölçüler, isimler ve yerleşim uydurmadır.
-- **Bu depo `neon-lunapark-webgl`'in küçük öncülüdür.** Daha büyük, daha
-  ayrıntılı sahne orada yaşıyor; bu dosya kasıtlı olarak sade tutuldu.
+## Limits
+
+- **The dependency comes from a CDN.** `three` 0.128.0 and `OrbitControls` are
+  loaded over jsDelivr; with no network the page stays black. The version is
+  pinned, but the files are not in this repository.
+- **There is no measured frame rate claim.** The pixel ratio is capped at 1.6
+  and the shadow map is held at 1024x1024; those are reasonable defaults, not
+  measurements. There is no benchmark in the repository.
+- **`prefers-reduced-motion` slows motion down, it does not remove it.** The
+  Ferris wheel, the coaster and the carousel keep turning at 18% speed, while
+  the automatic camera orbit is switched off completely.
+- **The colour cycle in Festival mode stops under a reduced-motion preference,**
+  but the high neon brightness stays.
+- **The mutation test measures the gate, not the scene.** The 25/25 result says
+  the listed breakages are caught; a form of breakage nobody tested is always
+  possible. Visual correctness and frame rate still need a human to look.
+- **The scene is modelled entirely by hand and represents no real park.**
+  Dimensions, names and layout are invented.
+- **The in-page copy is Turkish on purpose.** The document declares `lang="tr"`
+  and the gate asserts it; this README is the English entry point.
+- **This repository is the small precursor of `neon-lunapark-webgl`.** The
+  larger, more detailed scene lives there; this file was kept deliberately
+  plain.
 
 ---
 
-MIT, bkz. [`LICENSE`](./LICENSE).
+MIT, see [`LICENSE`](./LICENSE).

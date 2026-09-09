@@ -41,5 +41,8 @@ jobs:
       - name: Extract the historical inline gate
         run: python3 scripts/extract_baseline_gate.py 6eab73f8c35aa94de072d93642495b04e5351dba /tmp/baseline_gate.py
 
+      - name: Extract the README of the baseline commit
+        run: git show 6eab73f8c35aa94de072d93642495b04e5351dba:README.md > /tmp/baseline_README.md
+
       - name: Break the scene on purpose
-        run: python3 scripts/mutation_check.py --baseline /tmp/baseline_gate.py
+        run: python3 scripts/mutation_check.py --baseline /tmp/baseline_gate.py --baseline-readme /tmp/baseline_README.md
