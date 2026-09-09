@@ -46,9 +46,12 @@ for forbidden in ("fetch(", "XMLHttpRequest", "localStorage", "sessionStorage", 
     need(forbidden not in html, f"the scene must not use {forbidden}; it is a self-contained offline page")
 
 # --- README contract ----------------------------------------------------
+# The README is English; the in-page copy stays Turkish (see the lang="tr" check
+# above). These anchors are the English names of the same contract the gate
+# enforces on index.html, so a README that stops describing the scene fails CI.
 readme = pathlib.Path("README.md").read_text(encoding="utf-8")
 rlow = readme.casefold()
-expected = ["sınırlar", "gündüz", "normal gece", "festival", "orbitcontrols"] + versions
+expected = ["## Limits", "**Day**", "**Night**", "**Festival**", "OrbitControls"] + versions
 for phrase in expected:
     need(phrase.casefold() in rlow, f'README.md must document "{phrase}"')
 need("LICENSE" in readme, "README.md must point at the licence")
